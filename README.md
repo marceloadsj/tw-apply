@@ -1,6 +1,6 @@
 # tw-apply.macro
 
-[![npm version](https://badge.fury.io/js/tw-apply.macro.svg)](https://badge.fury.io/js/tw-apply.macro)
+[![npm version](https://badge.fury.io/js/tw-apply.svg)](https://badge.fury.io/js/tw-apply)
 
 Maintain the speed of developing with Tailwind while creating overwritable class names.
 
