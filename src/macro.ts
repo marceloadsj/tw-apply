@@ -1,8 +1,13 @@
 import * as path from "path";
 import * as fs from "fs";
 import { createMacro, MacroParams } from "babel-plugin-macros";
-import { File } from "@babel/types";
-import { NodePath } from "@babel/traverse";
+import {
+  File,
+  TemplateElement,
+  Expression,
+  TSType,
+  MemberExpression,
+} from "@babel/types";
 
 interface Config {
   fileSuffix?: string;
@@ -43,6 +48,8 @@ function validateConfig(config: Config) {
   };
 }
 
+const IMPORT_NAME = "__twa__";
+
 function processRules(parameters: MacroParams) {
   const { state, babel } = parameters;
 
@@ -52,41 +59,101 @@ function processRules(parameters: MacroParams) {
 
   babel.traverse(state.file.ast, {
     StringLiteral(path) {
-      processSingleRule(parameters, { path, rules }, path.node.value, indexRef);
+      const selector = createSelector(rules, path.node.value, indexRef);
+
+      if (selector) {
+        path.replaceWith(
+          babel.types.stringLiteral(`${IMPORT_NAME}.${selector}`)
+        );
+      }
     },
 
-    TemplateElement(path) {
-      processSingleRule(
-        parameters,
-        { path, rules },
-        path.node.value.raw,
-        indexRef
-      );
+    TemplateLiteral(path) {
+      const quasis: Array<TemplateElement> = [];
+      const expressions: Array<Expression | TSType | MemberExpression> = [];
+
+      path.node.quasis.forEach((templateNode, index) => {
+        const selector = createSelector(
+          rules,
+          templateNode.value.raw,
+          indexRef
+        );
+
+        if (selector) {
+          injectTemplateElements(
+            parameters,
+            templateNode,
+            selector,
+            quasis,
+            expressions
+          );
+        } else {
+          quasis.push(templateNode);
+        }
+
+        if (path.node.expressions[index]) {
+          expressions.push(path.node.expressions[index]);
+        }
+      });
+
+      path.node.quasis = quasis;
+      path.node.expressions = expressions;
     },
   });
 
   return rules.join("");
 }
 
-const IMPORT_NAME = "__twa__";
-
-function processSingleRule(
-  { babel }: MacroParams,
-  { path, rules }: { path: NodePath; rules: Array<string> },
+function createSelector(
+  rules: Array<string>,
   value: string,
   indexRef: { current: number }
 ) {
-  if (value.startsWith("@apply ")) {
-    const selector = `twa${indexRef.current}`;
+  let selector: string | undefined;
 
-    path.replaceWith(
-      (babel.parse(`${IMPORT_NAME}.${selector}`) as File).program.body[0]
-    );
+  if (value.trim().startsWith("@apply ")) {
+    selector = `twa${indexRef.current}`;
 
     rules.push(`.${selector}{${value};}`);
 
     indexRef.current++;
   }
+
+  return selector;
+}
+
+function injectTemplateElements(
+  { babel }: MacroParams,
+  templateNode: TemplateElement,
+  selector: string,
+  quasis: Array<TemplateElement>,
+  expressions: Array<Expression | TSType | MemberExpression>
+) {
+  // Inject left and right empty spaces correctly
+  const leftTemplate = templateNode.value.raw.startsWith(" ") ? " " : "";
+
+  quasis.push(
+    babel.types.templateElement({
+      raw: leftTemplate,
+      cooked: leftTemplate,
+    })
+  );
+
+  expressions.push(
+    babel.types.memberExpression(
+      babel.types.identifier(IMPORT_NAME),
+      babel.types.identifier(selector)
+    )
+  );
+
+  const rightTemplate = templateNode.value.raw.endsWith(" ") ? " " : "";
+
+  quasis.push(
+    babel.types.templateElement({
+      raw: rightTemplate,
+      cooked: rightTemplate,
+    })
+  );
 }
 
 function getCssFilename(filename: string, fileSuffix: string) {
