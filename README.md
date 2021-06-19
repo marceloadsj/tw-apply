@@ -23,6 +23,8 @@ Maintain the speed of developing with Tailwind while creating overwritable class
 - Increase the specificity of your utility classes: https://tailwindcss.com/docs/configuration#selector-strategy
   - You can use a simple tag selector, like **html**
 
+---
+
 ## Usage
 
 ```typescript
@@ -90,7 +92,7 @@ The way you can solve this problem is using the **@apply** function to create a 
 
 And that's when you slow down your coding: you have to give that class a **name**, and as we as all know, _Naming things is one of the hardest problem in Computer Science_.
 
-## The tw-apply.macro solution
+**The solution: tw-apply.macro**
 
 ```typescript
 import "tw-apply.macro";
