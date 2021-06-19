@@ -1,4 +1,4 @@
-# tw-apply.macro
+# tw-apply/macro
 
 [![npm version](https://badge.fury.io/js/tw-apply.svg)](https://badge.fury.io/js/tw-apply)
 
@@ -28,7 +28,7 @@ Maintain the speed of developing with Tailwind while creating overwritable class
 ## Usage
 
 ```typescript
-import "tw-apply.macro";
+import "tw-apply/macro";
 
 function Button({ className = "", ...props }) {
   return (
@@ -92,10 +92,10 @@ The way you can solve this problem is using the **@apply** function to create a 
 
 And that's when you slow down your coding: you have to give that class a **name**, and as we as all know, _Naming things is one of the hardest problem in Computer Science_.
 
-**The solution: tw-apply.macro**
+**The solution: tw-apply/macro**
 
 ```typescript
-import "tw-apply.macro";
+import "tw-apply/macro";
 
 function Button({ className = "", ...props }) {
   return (
