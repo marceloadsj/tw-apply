@@ -8,6 +8,8 @@ Maintain the speed of developing with Tailwind while creating overwritable class
 
 ## Install
 
+**Early development stages, do not use in production yet**
+
 > yarn add tw-apply
 
 - Setup Babel Macro: https://github.com/kentcdodds/babel-plugin-macros
