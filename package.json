@@ -1,6 +1,6 @@
 {
   "name": "tw-apply",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Maintain the speed of developing with Tailwind while creating overwritable class names.",
   "keywords": [
     "babel-plugin-macros",
