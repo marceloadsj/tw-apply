@@ -1,7 +1,7 @@
 {
   "name": "tw-apply",
   "version": "0.0.4",
-  "license": "MIT",
+  "description": "Maintain the speed of developing with Tailwind while creating overwritable class names.",
   "keywords": [
     "babel-plugin-macros",
     "css",
@@ -13,13 +13,24 @@
     "@apply",
     "css-modules"
   ],
-  "scripts": {
-    "build": "tsc"
+  "homepage": "https://github.com/marceloadsj/tw-apply",
+  "bugs": "https://github.com/marceloadsj/tw-apply/issues",
+  "license": "MIT",
+  "author": {
+    "name": "Marcelo da Silva",
+    "url": "https://github.com/marceloadsj"
   },
   "files": [
     "dist",
     "macro.js"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marceloadsj/tw-apply.git"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
   "dependencies": {
     "@babel/core": "^7.14.6",
     "@babel/types": "^7.14.5",
