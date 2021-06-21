@@ -18,7 +18,7 @@
   },
   "files": [
     "dist",
-    "./macro.js"
+    "macro.js"
   ],
   "dependencies": {
     "@babel/core": "^7.14.6",
