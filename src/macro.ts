@@ -3,49 +3,54 @@ import * as fs from "fs";
 import { createMacro, MacroParams } from "babel-plugin-macros";
 import {
   File,
-  TemplateElement,
   Expression,
   TSType,
+  TemplateLiteral,
+  TemplateElement,
   MemberExpression,
 } from "@babel/types";
-
-interface Config {
-  fileSuffix?: string;
-}
+import { NodePath } from "@babel/core";
 
 export default createMacro(
   (parameters) => {
-    const { fileSuffix, filename } = validateParameters(parameters);
+    validateParameters(parameters);
 
-    const cssFilename = getCssFilename(filename, fileSuffix);
+    const { cssFilename, cssBasename } = getConfigs(parameters);
     const rules = processRules(parameters);
 
-    createCssFile(filename, cssFilename, rules);
-    injectCssImport(parameters, cssFilename);
+    fs.writeFileSync(cssFilename, rules);
+    injectCssImport(parameters, cssBasename);
   },
   { configName: "twApply" }
 );
 
-function validateParameters({ state, config }: MacroParams) {
-  const parsedConfig = validateConfig(config as Config);
+function validateParameters({ state, config = {} }: MacroParams) {
+  const fileSuffix = config.fileSuffix;
+
+  if (fileSuffix && typeof fileSuffix !== "string") {
+    throw Error(`Config fileSuffix "${config.fileSuffix}" is not supported.`);
+  }
 
   const { filename } = state.file.opts;
 
   if (!filename) {
     throw Error(`The "filename" property was not found.`);
   }
-
-  return { ...parsedConfig, filename };
 }
 
-function validateConfig(config: Config) {
-  if (config.fileSuffix && typeof config.fileSuffix !== "string") {
-    throw Error(`Config fileSuffix "${config.fileSuffix}" is not supported.`);
-  }
+function getConfigs({ state, config }: MacroParams) {
+  const fileSuffix = config!.fileSuffix || "";
+  const filename = state.file.opts.filename!;
 
-  return {
-    fileSuffix: config.fileSuffix || "",
-  };
+  // Css basename will follow `${basename}${fileSuffix}.module.css``
+  const cssBasename = `${path.basename(
+    filename,
+    path.extname(filename)
+  )}${fileSuffix}.module.css`;
+
+  const cssFilename = filename.replace(path.basename(filename), cssBasename);
+
+  return { cssBasename, cssFilename };
 }
 
 const IMPORT_NAME = "__twa__";
@@ -54,7 +59,6 @@ function processRules(parameters: MacroParams) {
   const { state, babel } = parameters;
 
   const rules: Array<string> = [];
-
   const indexRef = { current: 0 };
 
   babel.traverse(state.file.ast, {
@@ -63,7 +67,10 @@ function processRules(parameters: MacroParams) {
 
       if (selector) {
         path.replaceWith(
-          babel.types.stringLiteral(`${IMPORT_NAME}.${selector}`)
+          babel.types.memberExpression(
+            babel.types.identifier(IMPORT_NAME),
+            babel.types.identifier(selector)
+          )
         );
       }
     },
@@ -72,29 +79,18 @@ function processRules(parameters: MacroParams) {
       const quasis: Array<TemplateElement> = [];
       const expressions: Array<Expression | TSType | MemberExpression> = [];
 
-      path.node.quasis.forEach((templateNode, index) => {
-        const selector = createSelector(
+      path.node.quasis.forEach((templateNode, index) =>
+        processQuasis(
+          parameters,
           rules,
-          templateNode.value.raw,
-          indexRef
-        );
-
-        if (selector) {
-          injectTemplateElements(
-            parameters,
-            templateNode,
-            selector,
-            quasis,
-            expressions
-          );
-        } else {
-          quasis.push(templateNode);
-        }
-
-        if (path.node.expressions[index]) {
-          expressions.push(path.node.expressions[index]);
-        }
-      });
+          indexRef,
+          quasis,
+          expressions,
+          path,
+          templateNode,
+          index
+        )
+      );
 
       path.node.quasis = quasis;
       path.node.expressions = expressions;
@@ -111,15 +107,46 @@ function createSelector(
 ) {
   let selector: string | undefined;
 
-  if (value.trim().startsWith("@apply ")) {
+  const parsedValue = value.trim();
+
+  if (parsedValue.startsWith("@apply ")) {
     selector = `twa${indexRef.current}`;
 
-    rules.push(`.${selector}{${value};}`);
+    rules.push(`.${selector}{${parsedValue};}`);
 
     indexRef.current++;
   }
 
   return selector;
+}
+
+function processQuasis(
+  parameters: MacroParams,
+  rules: Array<string>,
+  indexRef: { current: number },
+  quasis: Array<TemplateElement>,
+  expressions: Array<Expression | TSType | MemberExpression>,
+  path: NodePath<TemplateLiteral>,
+  templateNode: TemplateElement,
+  index: number
+) {
+  const selector = createSelector(rules, templateNode.value.raw, indexRef);
+
+  if (selector) {
+    injectTemplateElements(
+      parameters,
+      templateNode,
+      selector,
+      quasis,
+      expressions
+    );
+  } else {
+    quasis.push(templateNode);
+  }
+
+  if (path.node.expressions[index]) {
+    expressions.push(path.node.expressions[index]);
+  }
 }
 
 function injectTemplateElements(
@@ -156,24 +183,11 @@ function injectTemplateElements(
   );
 }
 
-function getCssFilename(filename: string, fileSuffix: string) {
-  // Css filename will follow `${basename}${fileSuffix}.module.css``
-  return `${path.basename(
-    filename,
-    path.extname(filename)
-  )}${fileSuffix}.module.css`;
-}
-
 function injectCssImport({ state, babel }: MacroParams, filename: string) {
   state.file.ast.program.body.unshift(
-    (babel.parse(`import ${IMPORT_NAME} from "./${filename}";`) as File).program
-      .body[0]
-  );
-}
-
-function createCssFile(filename: string, cssFilename: string, rules: string) {
-  fs.writeFileSync(
-    filename.replace(path.basename(filename), cssFilename),
-    rules
+    babel.types.importDeclaration(
+      [babel.types.importDefaultSpecifier(babel.types.identifier(IMPORT_NAME))],
+      babel.types.stringLiteral(`./${filename}`)
+    )
   );
 }
