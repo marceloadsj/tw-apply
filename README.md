@@ -86,7 +86,7 @@ function Button({ className = "", ...props }) {
 }
 
 function App() {
-  return <Button className="bg-blue-500" />; // I will not be blue :(
+  return <Button className="bg-blue-500" />; // I will be red, but I don't want to create new classes everytime :(
 }
 ```
 
