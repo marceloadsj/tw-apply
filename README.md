@@ -42,7 +42,7 @@ function Button({ className = "", ...props }) {
 }
 
 function App() {
-  return <Button className="bg-blue-500" />; // I will be red :)
+  return <Button className="bg-blue-500" />; // I will be blue :)
 }
 ```
 
